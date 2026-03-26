@@ -1,0 +1,181 @@
+generator client {
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "linux-musl-openssl-3.0.x"]
+}
+
+datasource db {
+  provider = "postgresql"
+  
+}
+
+// ===== USERS =====
+model User {
+  id           Int       @id @default(autoincrement())
+  name         String
+  email        String    @unique
+  passwordHash String
+  isAdmin      Boolean   @default(false)
+  createdAt    DateTime  @default(now())
+
+  favorites    Favorite[]
+  orders       Order[]
+  cartItems    CartItem[]
+}
+
+// ===== FAVORITES =====
+model Favorite {
+  id        Int     @id @default(autoincrement())
+  user      User?    @relation(fields: [userId], references: [id])
+  userId    Int?
+
+  guestId   String?
+
+  recipe    Recipe? @relation(fields: [recipeId], references: [id])
+  recipeId  Int?
+
+  cake      Cake?   @relation(fields: [cakeId], references: [id])
+  cakeId    Int?
+
+  createdAt DateTime @default(now())
+}
+
+
+// ===== ORDERS =====
+model Order {
+  id         Int       @id @default(autoincrement())
+  user      User?      @relation(fields: [userId], references: [id])
+  userId    Int?
+  cookie     String?   // optional for guest
+  totalPrice Int
+  status     String    // created | paid | ready | collected
+  pickupDate DateTime
+  createdAt  DateTime  @default(now())
+  
+  items      OrderItem[]
+}
+
+// ===== ORDER ITEMS =====
+model OrderItem {
+  id         Int @id @default(autoincrement())
+  order     Order @relation(fields: [orderId], references: [id])
+  orderId   Int
+
+  cake      Cake @relation(fields: [cakeId], references: [id])
+  cakeId    Int
+  size      CakeSizeOption @relation(fields: [sizeId], references: [id])
+  sizeId    Int
+
+  quantity   Int
+  customText String?
+  price      Int
+}
+
+// ===== CART ITEMS =====
+model CartItem {
+  id         Int @id @default(autoincrement())
+  userId     Int?    
+  user       User?    @relation(fields: [userId], references: [id])
+  cookie     String?
+  
+  cake       Cake @relation(fields: [cakeId], references: [id])
+  cakeId     Int
+  size       CakeSizeOption @relation(fields: [sizeId], references: [id])
+  sizeId     Int
+
+  quantity   Int
+  customText String?
+}
+
+// ===== WORKSHOPS =====
+model Workshop {
+  id                Int    @id @default(autoincrement())
+  title             String
+  description       String
+  durationInMinutes Int
+  minParticipants   Int
+  image             String?
+}
+
+// ===== RECIPES =====
+enum Difficulty {
+  EASY   @map("קל")
+  MEDIUM @map("בינוני")
+  HARD   @map("קשה")
+}
+
+model Recipe {
+  id                 Int                 @id @default(autoincrement())
+  title              String
+  description        String
+  preparationTime    Int
+  difficulty         Difficulty
+  instructions       String
+  image              String?
+  ingredientSections IngredientSection[]
+
+  favorites Favorite[]
+}
+
+model IngredientSection {
+  id          Int          @id @default(autoincrement())
+  title       String
+  recipeId    Int
+  ingredients Ingredient[]
+  recipe      Recipe       @relation(fields: [recipeId], references: [id])
+}
+
+model Ingredient {
+  id        Int               @id @default(autoincrement())
+  name      String
+  sectionId Int
+  section   IngredientSection @relation(fields: [sectionId], references: [id])
+}
+
+// ===== CAKES =====
+model Cake {
+  id              Int              @id @default(autoincrement())
+  title           String
+  description     String
+  image           String
+  allowCustomText Boolean
+  minQuantity     Int
+  types           CakeType[]
+  categories      CakeCategory[]
+  sizes           CakeSizeOption[]
+
+  favorites   Favorite[]
+  orderItems  OrderItem[]
+  cartItems   CartItem[]
+}
+
+model CakeSizeOption {
+  id     Int  @id @default(autoincrement())
+  size   Int
+  price  Int
+  cakeId Int
+  cake   Cake @relation(fields: [cakeId], references: [id])
+
+  orderItems OrderItem[]
+  cartItems  CartItem[]
+}
+
+// ===== ENUMS =====
+enum CakeType {
+  DAIRY @map("חלבי")
+  PARVE @map("פרווה")
+}
+
+enum CakeCategory {
+  ALL_CAKES   @map("כל_העוגות")
+  SHOWCASE    @map("עוגות_ראווה")
+  VINTAGE     @map("עוגות_וינטג")
+  MOUSSE      @map("עוגות_מוס")
+  CHEESECAKES @map("עוגות_גבינה")
+  PASSOVER    @map("עוגות_פס")
+  TARTS       @map("טארטים")
+  BIRTHDAY    @map("עוגות_יומולדת")
+  COOKIES     @map("עוגיות")
+  YEAST       @map("שמרים")
+  INDIVIDUAL  @map("קינוחים_אישיים")
+  DONUTS      @map("סופגניות")
+}
